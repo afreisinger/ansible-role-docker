@@ -1,0 +1,44 @@
+---
+- name: restart docker
+  service:
+    name: docker
+    state: "{{ docker_restart_handler_state }}"
+  ignore_errors: "{{ ansible_check_mode }}"
+  when: docker_service_manage | bool
+- name: reload systemd config
+  systemd:
+    daemon_reload: true
+  when: docker_service_manage | bool
+- name: Notify package installation
+  ansible.builtin.debug:
+    msg: Packages required for Docker have been installed.
+- name: Notify GPG key addition
+  ansible.builtin.debug:
+    msg: Docker GPG key added successfully.
+- name: Notify repository addition
+  ansible.builtin.debug:
+    msg: Docker repository added successfully.
+- name: Notify config directory creation
+  ansible.builtin.debug:
+    msg: Docker config directory created.
+- name: Notify proxy config copy
+  ansible.builtin.debug:
+    msg: Docker proxy configuration copied.
+- name: Notify daemon config copy
+  ansible.builtin.debug:
+    msg: Docker daemon configuration copied.
+- name: Notify registry directory creation
+  ansible.builtin.debug:
+    msg: Docker registry directory created.
+- name: Notify CA copy
+  ansible.builtin.debug:
+    msg: CA for registry copied successfully.
+- name: Notify systemd reload
+  ansible.builtin.debug:
+    msg: Systemd configuration reloaded.
+- name: Notify service restart
+  ansible.builtin.debug:
+    msg: Docker service restarted successfully.
+- name: Notify user group addition
+  ansible.builtin.debug:
+    msg: User added to the Docker group.
