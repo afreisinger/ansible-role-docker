@@ -178,3 +178,8 @@ Ninguna.
 ## Licencia
 
 MIT / BSD
+
+## Información del autor
+
+Creado en 2025 por **Adrián Freisinger**, inspirado en el trabajo de [Jeff Geerling](https://www.jeffgeerling.com/), autor de [*Ansible for DevOps*](https://www.ansiblefordevops.com/).
+
