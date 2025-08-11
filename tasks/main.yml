@@ -104,14 +104,12 @@
   notify:
     - Notify systemd reload
 
-- name: Enable and restart service
+- name: Enable docker service
   ansible.builtin.systemd:
     name: "{{ docker_services | default('docker') }}"
     enabled: true
     masked: false
-    state: reloaded
-  notify:
-    - Notify service restart
+    state: started
 
 - name: Ensure Docker is started and enabled at boot.
   service:
