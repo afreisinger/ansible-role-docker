@@ -1,14 +1,29 @@
 ---
+# - name: restart docker
+#   service:
+#     name: docker
+#     state: "{{ docker_restart_handler_state }}"
+#   ignore_errors: "{{ ansible_check_mode }}"
+#   when: docker_service_manage | bool
+# - name: reload systemd config
+#   systemd:
+#     daemon_reload: true
+#   when: docker_service_manage | bool
+
 - name: restart docker
   service:
     name: docker
-    state: "{{ docker_restart_handler_state }}"
+    state: restarted
   ignore_errors: "{{ ansible_check_mode }}"
   when: docker_service_manage | bool
-- name: reload systemd config
-  systemd:
-    daemon_reload: true
+
+- name: start docker
+  service:
+    name: docker
+    state: started
+  ignore_errors: "{{ ansible_check_mode }}"
   when: docker_service_manage | bool
+
 - name: Notify package installation
   ansible.builtin.debug:
     msg: Packages required for Docker have been installed.
