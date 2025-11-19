@@ -1,5 +1,6 @@
 ---
 # Edition can be one of: 'ce' (Community Edition) or 'ee' (Enterprise Edition).
+enable_docker: true
 docker_edition: ce
 docker_packages:
   - docker-{{ docker_edition }}

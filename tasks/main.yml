@@ -1,144 +1,152 @@
 ---
-- name: Load OS-specific vars.
-  include_vars: "{{ lookup('first_found', params) }}"
-  vars:
-    params:
-      files:
-        - '{{ansible_distribution}}.yml'
-        - '{{ansible_os_family}}.yml'
-        - main.yml
-      paths:
-        - 'vars'
+# tasks/main.yml
 
-- include_tasks: setup-RedHat.yml
-  when: ansible_os_family == 'RedHat'
+- name: Docker main block
+  when: enable_docker | default(true)
+  block:
 
-- include_tasks: setup-Debian.yml
-  when: ansible_os_family == 'Debian'
+    - name: Load OS-specific vars.
+      include_vars: "{{ lookup('first_found', params) }}"
+      vars:
+        params:
+          files:
+            - '{{ ansible_distribution }}.yml'
+            - '{{ ansible_os_family }}.yml'
+            - main.yml
+          paths:
+            - 'vars'
 
-- name: Install Docker packages.
-  package:
-    name: "{{ docker_packages }}"
-    state: "{{ docker_packages_state }}"
-  notify: restart docker
-  ignore_errors: "{{ ansible_check_mode }}"
-  when: "ansible_version.full is version_compare('2.12', '<') or ansible_os_family not in ['RedHat', 'Debian']"
+    - include_tasks: setup-RedHat.yml
+      when: ansible_os_family == 'RedHat'
 
-- name: Install Docker packages (with downgrade option).
-  package:
-    name: "{{ docker_packages }}"
-    state: "{{ docker_packages_state }}"
-    allow_downgrade: true
-  notify: restart docker
-  ignore_errors: "{{ ansible_check_mode }}"
-  when: "ansible_version.full is version_compare('2.12', '>=') and ansible_os_family in ['RedHat', 'Debian']"
+    - include_tasks: setup-Debian.yml
+      when: ansible_os_family == 'Debian'
 
-- name: Install docker-compose plugin.
-  package:
-    name: "{{ docker_compose_package }}"
-    state: "{{ docker_compose_package_state }}"
-  notify: restart docker
-  ignore_errors: "{{ ansible_check_mode }}"
-  when: "docker_install_compose_plugin | bool == true and (ansible_version.full is version_compare('2.12', '<') or ansible_os_family not in ['RedHat', 'Debian'])"
+    - name: Install Docker packages.
+      package:
+        name: "{{ docker_packages }}"
+        state: "{{ docker_packages_state }}"
+      notify: restart docker
+      ignore_errors: "{{ ansible_check_mode }}"
+      when: ansible_version.full is version_compare('2.12', '<') or ansible_os_family not in ['RedHat', 'Debian']
 
-- name: Install docker-compose-plugin (with downgrade option).
-  package:
-    name: "{{ docker_compose_package }}"
-    state: "{{ docker_compose_package_state }}"
-    allow_downgrade: true
-  notify: restart docker
-  ignore_errors: "{{ ansible_check_mode }}"
-  when: "docker_install_compose_plugin | bool == true and ansible_version.full is version_compare('2.12', '>=') and ansible_os_family in ['RedHat', 'Debian']"
+    - name: Install Docker packages (with downgrade option).
+      package:
+        name: "{{ docker_packages }}"
+        state: "{{ docker_packages_state }}"
+        allow_downgrade: true
+      notify: restart docker
+      ignore_errors: "{{ ansible_check_mode }}"
+      when: ansible_version.full is version_compare('2.12', '>=') and ansible_os_family in ['RedHat', 'Debian']
 
-- name: Ensure /etc/docker/ directory exists.
-  file:
-    path: /etc/docker
-    state: directory
-    mode: 0755
-  when: docker_daemon_options.keys() | length > 0
+    - name: Install docker-compose plugin.
+      package:
+        name: "{{ docker_compose_package }}"
+        state: "{{ docker_compose_package_state }}"
+      notify: restart docker
+      ignore_errors: "{{ ansible_check_mode }}"
+      when: docker_install_compose_plugin | bool == true and (ansible_version.full is version_compare('2.12', '<') or ansible_os_family not in ['RedHat', 'Debian'])
 
-- name: Configure Docker daemon options.
-  copy:
-    content: "{{ docker_daemon_options | to_nice_json }}"
-    dest: /etc/docker/daemon.json
-    mode: 0644
-  when: docker_daemon_options.keys() | length > 0
-  notify: restart docker
+    - name: Install docker-compose-plugin (with downgrade option).
+      package:
+        name: "{{ docker_compose_package }}"
+        state: "{{ docker_compose_package_state }}"
+        allow_downgrade: true
+      notify: restart docker
+      ignore_errors: "{{ ansible_check_mode }}"
+      when: docker_install_compose_plugin | bool == true and ansible_version.full is version_compare('2.12', '>=') and ansible_os_family in ['RedHat', 'Debian']
 
-- name: Create docker config target directory
-  file:
-    path: /etc/systemd/system/docker.service.d
-    state: directory
-    mode: 0755
-  when: docker_service_settings | length > 0
+    - name: Ensure /etc/docker/ directory exists.
+      file:
+        path: /etc/docker
+        state: directory
+        mode: 0755
+      when: docker_daemon_options.keys() | length > 0
 
-- name: Configure docker service environment.
-  template:
-    src: http-proxy.conf.j2
-    dest: /etc/systemd/system/docker.service.d/http-proxy.conf
-    mode: 0644
-  when: docker_service_settings | length > 0
-  notify:
-    - reload systemd config
-    - restart docker
+    - name: Configure Docker daemon options.
+      copy:
+        content: "{{ docker_daemon_options | to_nice_json }}"
+        dest: /etc/docker/daemon.json
+        mode: 0644
+      when: docker_daemon_options.keys() | length > 0
+      notify: restart docker
 
-- name: Create certs directories for Docker registries
-  file:
-    path: "/etc/docker/certs.d/{{ item.host }}"
-    state: directory
-    mode: '0755'
-  loop: "{{ docker_custom_registries }}"
-  when: item.host | length > 0 and item.ca_file | length > 0
+    - name: Create docker config target directory
+      file:
+        path: /etc/systemd/system/docker.service.d
+        state: directory
+        mode: 0755
+      when: docker_service_settings | length > 0
 
-- name: Copy CA certificates for Docker registries
-  copy:
-    src: "files/{{ item.ca_file }}"
-    dest: "/etc/docker/certs.d/{{ item.host }}/ca.crt"
-  loop: "{{ docker_custom_registries }}"
-  when: item.host | length > 0 and item.ca_file | length > 0
-  notify: restart docker
+    - name: Configure docker service environment.
+      template:
+        src: http-proxy.conf.j2
+        dest: /etc/systemd/system/docker.service.d/http-proxy.conf
+        mode: 0644
+      when: docker_service_settings | length > 0
+      notify:
+        - reload systemd config
+        - restart docker
 
-- name: Reload systemd config
-  systemd:
-    daemon_reload: true
-  notify:
-    - Notify systemd reload
+    - name: Create certs directories for Docker registries
+      file:
+        path: "/etc/docker/certs.d/{{ item.host }}"
+        state: directory
+        mode: '0755'
+      loop: "{{ docker_custom_registries }}"
+      when: item.host | length > 0 and item.ca_file | length > 0
 
-- name: Enable docker service
-  ansible.builtin.systemd:
-    name: "{{ docker_services | default('docker') }}"
-    enabled: true
-    masked: false
-    state: started
+    - name: Copy CA certificates for Docker registries
+      copy:
+        src: "files/{{ item.ca_file }}"
+        dest: "/etc/docker/certs.d/{{ item.host }}/ca.crt"
+      loop: "{{ docker_custom_registries }}"
+      when: item.host | length > 0 and item.ca_file | length > 0
+      notify: restart docker
 
-- name: Ensure Docker is started and enabled at boot.
-  service:
-    name: docker
-    state: "{{ docker_service_state }}"
-    enabled: "{{ docker_service_enabled }}"
-  ignore_errors: "{{ ansible_check_mode }}"
-  when: docker_service_manage | bool
+    - name: Reload systemd config
+      systemd:
+        daemon_reload: true
+      notify:
+        - Notify systemd reload
 
-- name: Ensure handlers are notified now to avoid firewall conflicts.
-  meta: flush_handlers
+    - name: Enable and restart service
+      ansible.builtin.systemd:
+        name: "{{ docker_services | default('docker') }}"
+        enabled: true
+        masked: false
+        state: reloaded
+      notify:
+        - Notify service restart
 
-- include_tasks: docker-compose.yml
-  when: docker_install_compose | bool
+    - name: Ensure Docker is started and enabled at boot.
+      service:
+        name: docker
+        state: "{{ docker_service_state }}"
+        enabled: "{{ docker_service_enabled }}"
+      ignore_errors: "{{ ansible_check_mode }}"
+      when: docker_service_manage | bool
 
-- name: Get docker group info using getent.
-  getent:
-    database: group
-    key: docker
-    split: ':'
-  when: docker_users | length > 0
+    - name: Ensure handlers are notified now to avoid firewall conflicts.
+      meta: flush_handlers
 
-- name: Check if there are any users to add to the docker group.
-  set_fact:
-    at_least_one_user_to_modify: true
-  when:
-    - docker_users | length > 0
-    - item not in ansible_facts.getent_group["docker"][2]
-  with_items: "{{ docker_users }}"
+    - include_tasks: docker-compose.yml
+      when: docker_install_compose | bool
 
-- include_tasks: docker-users.yml
-  when: at_least_one_user_to_modify is defined
+    - name: Get docker group info using getent.
+      getent:
+        database: group
+        key: docker
+        split: ':'
+      when: docker_users | length > 0
+
+    - name: Check if there are any users to add to the docker group.
+      set_fact:
+        at_least_one_user_to_modify: true
+      loop: "{{ docker_users }}"
+      when:
+        - docker_users | length > 0
+        - item not in ansible_facts.getent_group["docker"][2]
+
+    - include_tasks: docker-users.yml
+      when: at_least_one_user_to_modify is defined
