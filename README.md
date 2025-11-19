@@ -14,15 +14,15 @@ A continuación, se enumeran las variables disponibles junto con sus valores pre
 
 ```yaml
 # La edición puede ser: 'ce' (Community Edition) o 'ee' (Enterprise Edition).
-docker_edition: 'ce'
+docker_edition: "ce"
 docker_packages:
-    - "docker-{{ docker_edition }}"
-    - "docker-{{ docker_edition }}-cli"
-    - "docker-{{ docker_edition }}-rootless-extras"
+  - "docker-{{ docker_edition }}"
+  - "docker-{{ docker_edition }}-cli"
+  - "docker-{{ docker_edition }}-rootless-extras"
 docker_packages_state: present
 ```
 
-La variable `docker_edition` debe ser `ce` (Community Edition) o `ee` (Enterprise Edition). También puedes especificar una versión específica de Docker para instalar usando el formato específico de la distribución: 
+La variable `docker_edition` debe ser `ce` (Community Edition) o `ee` (Enterprise Edition). También puedes especificar una versión específica de Docker para instalar usando el formato específico de la distribución:
 Red Hat/CentOS: `docker-{{ docker_edition }}-<VERSIÓN>` (Nota: debes añadir esto a todos los paquetes);
 Debian/Ubuntu: `docker-{{ docker_edition }}=<VERSIÓN>` (Nota: debes añadir esto a todos los paquetes).
 
@@ -102,8 +102,8 @@ Puedes cambiar `docker_apt_gpg_key` a una URL diferente si estás detrás de un 
 
 ```yaml
 docker_yum_repo_url: "{{ docker_repo_url }}/{{ (ansible_distribution == 'Fedora') | ternary('fedora','centos') }}/docker-{{ docker_edition }}.repo"
-docker_yum_repo_enable_nightly: '0'
-docker_yum_repo_enable_test: '0'
+docker_yum_repo_enable_nightly: "0"
+docker_yum_repo_enable_test: "0"
 docker_yum_gpg_key: "{{ docker_repo_url }}/{{ (ansible_distribution == 'Fedora') | ternary('fedora', 'centos') }}/gpg"
 ```
 
@@ -113,36 +113,35 @@ Puedes cambiar `docker_yum_gpg_key` a una URL diferente si estás detrás de un 
 
 ```yaml
 docker_users:
-  - user1
-  - user2
+  - appserv
+  - afreisinger
 ```
 
 Lista de usuarios del sistema que se añadirán al grupo `docker` (para que puedan usar Docker en el servidor).
 
 ```yaml
 docker_daemon_options:
-  storage-driver: "overlay2"
   log-opts:
     max-size: "100m"
+  debug: true
+  default-address-pools: [{ "base": "192.168.0.0/16", "size": 24 }]
 ```
 
 Opciones personalizadas para `dockerd` que se configuran a través de este diccionario que representa el archivo JSON `/etc/docker/daemon.json`.
 
 ```yaml
 docker_service_settings:
-  - HTTP_PROXY=http://proxy.example.com:80
-  - HTTPS_PROXY=https://proxy.example.com:443
-  - NO_PROXY=localhost,127.0.0.1,docker-registry.example.com,.corp
+  - HTTP_PROXY=http://10.30.28.143:80
+  - HTTPS_PROXY=https://10.30.28.143:80
+  - NO_PROXY=10.0.0.0/8,.afip.gob.ar,.afip.gov.ar,intranet,172.0.0.0/8,10.*,*.afip.gob.ar
 ```
 
-Configuración personalizada del servicio Docker. Debería usarse solo para configuraciones de proxy `HTTP/HTTPS`.
+Configuración personalizada del servicio Docker. Debería usarse solo para configuraciones de proxy `HTTP/HTTPS`. Certificados en ./files
 
 ```yaml
 docker_custom_registries:
-  - host: "registry.prd.example.com"
-    ca_file: "registry-prd-example-ca.crt"
-  - host: "registry.dev.example.com"
-    ca_file: "registry-dev-example-ca.crt"
+  - host: "harbor.prd.afip.gob.ar"
+    ca_file: "AFIP-SSL-CA_chain.crt"
 ```
 
 Registros privados de Docker confiables con Autoridades de Certificación (CAs) personalizadas. Coloca los archivos de CA en el directorio `files/` de tu rol o playbook. Cada CA se instalará en `/etc/docker/certs.d/<host>/ca.crt`.
@@ -160,7 +159,7 @@ Muchos usuarios de este rol desean usar Ansible para construir imágenes de Dock
 
   roles:
     - geerlingguy.pip
-    - geerlingguy.docker
+    - afreisinger.docker
 ```
 
 ## Dependencias
